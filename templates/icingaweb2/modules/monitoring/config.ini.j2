@@ -1,0 +1,12 @@
+[global]
+show_stacktraces = "{{ icingaweb2_show_stacktraces }}"
+config_backend = "db"
+config_resource = "icingaweb_db"
+
+[logging]
+log = "syslog"
+level = "ERROR"
+application = "icingaweb2"
+
+[security]
+protected_customvars = "*pw*,*pass*,community"

@@ -1,0 +1,35 @@
+---
+
+# APT settings
+icinga2_apt_key_url: "http://packages.icinga.org/icinga.key"
+icinga2_apt_repository: 'deb http://packages.icinga.org/ubuntu icinga-{{ansible_distribution_release}} main'
+
+icinga2_apt_pin_priority: 500
+
+icinga2_is_server: no
+icinga2_enable_apache: no
+icinga2_monitor: yes
+
+icinga2_ido_module: no
+icinga2_db_host: localhost
+icinga2_db_port: 5432
+icinga2_db_user: icinga
+icinga2_db_name: icinga
+icinga2_db_password: icinga
+
+icingaweb2_show_stacktraces: 1
+
+icingaweb2_webuser: admin
+icingaweb2_webpass: d90s39F30923DfAz@d
+icingaweb2_create_apache_conf: no
+
+# Define users
+icinga2_users:
+  - name: admin
+    display_name: Administrator
+    email: root@localhost
+    groups:
+      - administrators
+icinga2_groups:
+  - name: administrators
+    display_name: Administrators

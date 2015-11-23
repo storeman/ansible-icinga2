@@ -1,0 +1,114 @@
+---
+- name: Icinga2 | Check if Apache2 is installed
+  command: dpkg-query -l apache2
+  register: is_installed
+  failed_when: is_installed.rc > 1
+  changed_when: no
+
+- name: Icinga2 | Add Icinga2 repository apt-key
+  apt_key:
+    url: "{{ icinga2_apt_key_url }}"
+    state: present
+
+- name: Icinga2 | Add Icinga2 repository
+  apt_repository:
+    repo: "{{ icinga2_apt_repository }}"
+    state: present
+
+- name: Icinga2 Apache | Install IcingaWeb
+  apt:
+    name: "{{item}}"
+    state: present
+    update_cache: yes
+    cache_valid_time: "{{apt_cache_valid_time | default (3600)}}"
+  with_items:
+    - icingaweb2
+    - icingaweb2-module-monitoring
+    - icingaweb2-module-doc
+
+- name: Icinga2 Apache | Enable module
+  shell: 'icinga2 feature enable command'
+  notify: restart icinga2
+
+- name: Icinga2 Apache | Setting command permissions
+  shell: 'usermod -a -G icingaweb2 www-data'
+  notify: restart apache2
+
+- name: Icinga2 Apache | Configure apache
+  shell: 'icingacli setup config webserver apache --document-root /usr/share/icingaweb2/public > /etc/apache2/mods-available/icingaweb2.conf'
+  notify: restart apache2
+  when: icingaweb2_create_apache_conf|bool
+
+- name: Icinga2 Apache | Conf file permissions
+  file:
+    dest: '/etc/apache2/mods-available/icingaweb2.conf'
+    group: root
+    owner: root
+    mode: '0777'
+  notify: restart apache2
+  when: icingaweb2_create_apache_conf|bool
+
+- name: Icinga2 Apache | Enable SetEnv
+  file:
+    dest: '/etc/apache2/mods-enabled/{{ item }}'
+    src: '/etc/apache2/mods-available/{{ item }}'
+    state: link
+  with_items:
+    - 'env.load'
+  notify: restart apache2
+  when: icingaweb2_create_apache_conf|bool
+
+- name: Icinga2 Apache | Enable module
+  file:
+    dest: '/etc/apache2/mods-enabled/icingaweb2.conf'
+    src: '/etc/apache2/mods-available/icingaweb2.conf'
+    state: link
+  notify: restart apache2
+  when: icingaweb2_create_apache_conf|bool
+
+- name: Icinga web | Create monitoring directory
+  file:
+    dest: /etc/icingaweb2/modules/monitoring
+    recurse: yes
+    state: directory
+    owner: www-data
+    group: icingaweb2
+
+- name: Icinga2 Apache | Create configuration files
+  template: src=icingaweb2/{{ item }}.j2 dest=/etc/icingaweb2/{{ item }} mode=0660 owner=www-data group=icingaweb2
+  with_items:
+    - "authentication.ini"
+    - "backends.ini"
+    - "modules/monitoring/commandtransports.ini"
+    - "modules/monitoring/config.ini"
+    - "modules/monitoring/resources.ini"
+
+- name: Icinga2 Web | Create db schema
+  shell: 'psql -d {{ icinga2_db_name }} -U {{ icinga2_db_user }} -h {{ icinga2_db_host }} -p {{ icinga2_db_port }} < /usr/share/icingaweb2/etc/schema/pgsql.schema.sql'
+  environment:
+    PGPASSWORD: "{{ icinga2_db_password }}"
+
+- name: Icinga2 Web | Check if user exists
+  shell: psql -d {{ icinga2_db_name }} -U {{ icinga2_db_user }} -h {{ icinga2_db_host }} -p {{ icinga2_db_port }} -c "SELECT name FROM icingaweb_user WHERE name = '{{ icingaweb2_webuser }}';"
+  environment:
+    PGPASSWORD: "{{ icinga2_db_password }}"
+  register: icinga2_user_row
+
+- name: Icinga2 Web | Hash password
+  shell: openssl passwd -1 {{ icingaweb2_webpass }}
+  register: icingaweb2_webpass_hashed
+
+- name: test
+  debug: var=icingaweb2_webpass_hashed.stdout
+
+- name: Icinga2 Web | Update user
+  shell: psql -d {{ icinga2_db_name }} -U {{ icinga2_db_user }} -h {{ icinga2_db_host }} -p {{ icinga2_db_port }} -c "UPDATE icingaweb_user SET password_hash = '{{ icingaweb2_webpass_hashed.stdout }}' WHERE name = '{{ icingaweb2_webuser }}';"
+  environment:
+    PGPASSWORD: "{{ icinga2_db_password }}"
+  when: icinga2_user_row.stdout.find('0 rows') == -1
+
+- name: Icinga2 Web | Create user
+  shell: psql -d {{ icinga2_db_name }} -U {{ icinga2_db_user }} -h {{ icinga2_db_host }} -p {{ icinga2_db_port }} -c "INSERT INTO icingaweb_user (name, active, password_hash) VALUES ('{{ icingaweb2_webuser }}', 1, '{{ icingaweb2_webpass_hashed.stdout }}');"
+  environment:
+    PGPASSWORD: "{{ icinga2_db_password }}"
+  when: icinga2_user_row.stdout.find('0 rows') != -1

@@ -1,0 +1,6 @@
+---
+- name: Icinga2 Master | Create new self signed certificate
+  shell: icinga2 pki new-cert --cn {{ ansible_fqdn }} \
+          --key /etc/icinga2/pki/icinga2-{{ ansible_fqdn }}.key \
+          --cert /etc/icinga2/pki/icinga2-{{ ansible_fqdn }}.crt \
+          creates=/etc/icinga2/pki/icinga2-{{ ansible_fqdn }}.key

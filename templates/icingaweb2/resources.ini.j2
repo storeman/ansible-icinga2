@@ -1,0 +1,21 @@
+[icingaweb_db]
+type = "db"
+db = "pgsql"
+host = "{{ icinga2_db_host }}"
+port = "{{ icinga2_db_port }}"
+dbname = "{{ icinga2_db_name }}"
+username = "{{ icinga2_db_user }}"
+password = "{{ icinga2_db_password }}"
+charset = "UTF-8"
+persistent = "0"
+
+[icinga2]
+type = "db"
+db = "pgsql"
+host = "{{ icinga2_db_host }}"
+port = "{{ icinga2_db_port }}"
+dbname = "{{ icinga2_db_name }}"
+username = "{{ icinga2_db_user }}"
+password = "{{ icinga2_db_password }}"
+charset = "UTF-8"
+persistent = "0"

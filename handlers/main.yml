@@ -1,0 +1,15 @@
+---
+- name: restart icinga2
+  service: name=icinga2 state=restarted
+
+- name: restart apache2
+  service: name=apache2 state=restarted
+
+- name: icinga2 master update nodes
+  command: sudo icinga2 node update-config
+  delegate_to: "{{ icinga2_master }}"
+  notify: icinga2 master reload
+
+- name: icinga2 master reload
+  service: name=icinga2 state=reloaded
+  delegate_to: "{{ icinga2_master }}"

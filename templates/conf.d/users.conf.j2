@@ -1,0 +1,21 @@
+/**
+ * The example user 'icingaadmin' and the example
+ * group 'icingaadmins'.
+ */
+
+{% for user in icinga2_users %}
+object User "{{ user.name }}" {
+  import "generic-user"
+  display_name = "{{ user.display_name }}"
+
+  groups = ["{{user.groups|join('","') }}"]
+
+  email = "{{ user.email }}"
+}
+{% endfor %}
+
+{% for group in icinga2_groups %}
+object User "{{ group.name }}" {
+  display_name = "{{ group.display_name }}"
+}
+{% endfor %}

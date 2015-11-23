@@ -1,0 +1,14 @@
+---
+#- include: base-setup.yml
+
+#- include: ido-postgres.yml
+#  when: icinga2_is_server|bool and icinga2_ido_module == 'postgres'
+
+- include: setup-master.yml
+  when: icinga2_is_server|bool
+
+- include: setup-node.yml
+  when: not icinga2_is_server|bool
+
+#- include: setup-apache.yml
+#  when: icinga2_enable_apache|bool

@@ -1,0 +1,30 @@
+---
+- name: Icinga2 IDO Postgres | Install packages
+  apt:
+    name: "{{item}}"
+    state: present
+    update_cache: yes
+    cache_valid_time: "{{apt_cache_valid_time | default (3600)}}"
+  with_items:
+    - icinga2-ido-pgsql
+    - postgresql-client-common
+
+- name: dbg
+  shell: 'echo $PGPASSWORD > /tmp/password'
+  environment:
+    PGPASSWORD: '{{ icinga2_db_password }}'
+
+- name: Icinga2 IDO Postgres | Install schema
+  shell: 'psql -d {{ icinga2_db_name }} -U {{ icinga2_db_user }} -h {{ icinga2_db_host }} -p {{ icinga2_db_port }} < /usr/share/icinga2-ido-pgsql/schema/pgsql.sql'
+  environment:
+    PGPASSWORD: "{{ icinga2_db_password }}"
+
+- name: Icinga2 IDO Postgres | Update configuration file
+  template: src={{ item }}.j2 dest=/etc/icinga2/features-available/{{ item }} mode=0600 owner=nagios group=nagios
+  with_items:
+    - "ido-pgsql.conf"
+  notify: restart icinga2
+
+- name: Icinga2 IDO Postgres | Enable ido-pgsql
+  shell: 'icinga2 feature enable ido-pgsql'
+  notify: restart icinga2
